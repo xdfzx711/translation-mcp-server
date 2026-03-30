@@ -1,0 +1,21 @@
+# MCP翻译服务依赖包
+# Python标准库已包含所需的基础功能
+
+# 百度翻译API依赖
+requests>=2.25.0       # HTTP请求库
+aiohttp>=3.8.0         # 异步HTTP客户端
+
+# Tokenizer支持
+tiktoken>=0.5.0        # OpenAI tokenizer
+transformers>=4.30.0   # Qwen和其他模型的tokenizer
+torch>=1.13.0          # transformers的依赖（CPU版本）
+
+# 如果需要使用其他翻译API，可以添加以下包：
+# googletrans==4.0.0rc1  # Google翻译API
+# translators>=5.0.0     # 多翻译服务聚合库
+
+# 可选的增强功能
+# langdetect>=1.0.9      # 更准确的语言检测
+# polyglot>=16.7.4       # 多语言处理库
+
+asyncio

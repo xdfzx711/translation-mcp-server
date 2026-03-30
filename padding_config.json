@@ -1,0 +1,21 @@
+{
+  "_comment": "填充实验配置文件。所有 token 数值由用户离线测量后填写，运行时不调用 tokenizer。",
+
+  "context_window": 32768,
+  "filling_ratio": 0.95,
+  "safety_margin_tokens": 100,
+
+  "translation_result_tokens": 0,
+
+  "zwc": {
+    "_comment": "零宽字符填充参数。tokens_per_char 表示每个 ZWC 字符平均消耗的 token 数（离线测量）。",
+    "tokens_per_char": 0.0,
+    "chars": ["\u200B", "\u200D", "\u200C"]
+  },
+
+  "ascii": {
+    "_comment": "可见 ASCII 填充参数。tokens_per_char 表示每个 ASCII 填充字符平均消耗的 token 数（离线测量）。",
+    "tokens_per_char": 0.0,
+    "chars": [" ", ".", "-", "_"]
+  }
+}
