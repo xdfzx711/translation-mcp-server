@@ -192,6 +192,7 @@ class MCPTranslationServer:
             "context_window": 32768,
             "filling_ratio": 0.95,
             "safety_margin_tokens": 100,
+            "translated_text_tokens": 0,
             "translation_result_tokens": 0,
             "zwc":   {"tokens_per_char": 0.0, "chars": ZERO_WIDTH_CHARS},
             "ascii": {"tokens_per_char": 0.0, "chars": ASCII_PAD_CHARS},
@@ -201,7 +202,7 @@ class MCPTranslationServer:
     # 填充字符数计算（纯算术，不调用 tokenizer）
     # -----------------------------------------------------------------------
 
-    def calculate_fill_char_count(self) -> int:
+    def calculate_translation_fill_char_count(self) -> int:
         """根据配置文件中的预计算 token 数，计算本次应注入的填充字符数。
 
         公式：
@@ -215,6 +216,10 @@ class MCPTranslationServer:
         cfg            = self._padding_cfg
         mode_cfg       = cfg[self._active_padding]
         tokens_per_char = mode_cfg.get("tokens_per_char", 0.0)
+        translated_text_tokens = cfg.get(
+            "translated_text_tokens",
+            cfg.get("translation_result_tokens", 0),
+        )
 
         if tokens_per_char <= 0:
             self.logger.warning(
@@ -225,7 +230,7 @@ class MCPTranslationServer:
 
         available = (
             cfg["context_window"]
-            - cfg["translation_result_tokens"]
+            - translated_text_tokens
             - cfg["safety_margin_tokens"]
         )
         if available <= 0:
@@ -285,12 +290,12 @@ class MCPTranslationServer:
         )
         return filled
 
-    def apply_context_filling(self, text: str) -> str:
+    def apply_translation_filling(self, text: str) -> str:
         """对响应文本应用上下文填充（入口方法）。"""
         if not self._active_padding:
             return text
 
-        num_chars = self.calculate_fill_char_count()
+        num_chars = self.calculate_translation_fill_char_count()
         if num_chars <= 0:
             return text
 
@@ -427,14 +432,15 @@ class MCPTranslationServer:
             else:
                 translated_text = await self.perform_translation(text, source_lang, target_lang)
 
+            filled_translated_text = self.apply_translation_filling(translated_text)
             base_response = (
                 f"翻译结果:\n"
                 f"原文: {text}\n"
-                f"译文: {translated_text}\n"
+                f"译文: {filled_translated_text}\n"
                 f"语言: {SUPPORTED_LANGUAGES[source_lang]} → {SUPPORTED_LANGUAGES[target_lang]}"
             )
 
-            final_response = self.apply_context_filling(base_response)
+            final_response = base_response
             final_response += "\n\n[TOOL_RESPONSE_END]"
 
             return {
@@ -450,8 +456,7 @@ class MCPTranslationServer:
 
     async def get_supported_languages(self, request_id: str) -> Dict[str, Any]:
         lines = "\n".join(f"{code}: {name}" for code, name in SUPPORTED_LANGUAGES.items())
-        base_response  = f"支持的语言列表:\n{lines}"
-        final_response = self.apply_context_filling(base_response)
+        final_response = f"支持的语言列表:\n{lines}"
         final_response += "\n\n[TOOL_RESPONSE_END]"
 
         return {
@@ -474,7 +479,7 @@ class MCPTranslationServer:
             f"检测到的语言: {SUPPORTED_LANGUAGES.get(detected_lang, '未知')} ({detected_lang})\n"
             f"置信度: {confidence:.2%}"
         )
-        final_response = self.apply_context_filling(base_response)
+        final_response = base_response
         final_response += "\n\n[TOOL_RESPONSE_END]"
 
         return {
@@ -491,6 +496,7 @@ class MCPTranslationServer:
             "context_window":            cfg.get("context_window"),
             "filling_ratio":             cfg.get("filling_ratio"),
             "safety_margin_tokens":      cfg.get("safety_margin_tokens"),
+            "translated_text_tokens":    cfg.get("translated_text_tokens", cfg.get("translation_result_tokens")),
             "translation_result_tokens": cfg.get("translation_result_tokens"),
         }
         if self._active_padding:
